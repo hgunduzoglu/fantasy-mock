@@ -20,15 +20,17 @@ export default function DraftPage() {
   }
 
   const isUsersTurn = state.currentPick === state.userTeamIndex;
+  const overallPickNumber = state.picksMade + 1;
+  const roundPickNumber = state.currentPick + 1;
 
   return (
     <main className="p-6 space-y-4">
       <header>
         <h1 className="text-2xl font-bold">
-          Round {state.round} - Pick {state.currentPick + 1}
+          Round {state.round} - Pick {overallPickNumber}
         </h1>
         <p className="text-sm text-gray-600">
-          Your team is pick #{state.userTeamIndex + 1}.{" "}
+          Current round slot #{roundPickNumber} - Team draft position #{state.userTeamIndex + 1}.{" "}
           {isUsersTurn ? "It is your turn to draft." : "Waiting for bots to complete their turns."}
         </p>
       </header>

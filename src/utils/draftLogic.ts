@@ -43,6 +43,7 @@ export interface DraftState {
   direction: 1 | -1;
   totalRounds: number;
   userTeamIndex: number;
+  picksMade: number;
 }
 
 export const ROSTER_SLOTS = [
@@ -113,6 +114,7 @@ export function assignPlayer(state: DraftState, player: Player): DraftState {
     ...state,
     teams: nextTeams,
     available: state.available.filter((p) => p.player !== player.player),
+    picksMade: state.picksMade + 1,
   };
 
   advancePick(nextState);
@@ -167,5 +169,6 @@ export function initDraft(players: Player[], totalRounds = 13, userTeamIndex = 0
     direction: 1,
     totalRounds,
     userTeamIndex,
+    picksMade: 0,
   };
 }
