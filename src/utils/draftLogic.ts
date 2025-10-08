@@ -35,6 +35,12 @@ const NUMERIC_FIELDS = [
   "to",
 ] as const;
 
+const BOT_WEIGHT_TIERS: Array<{ maxRound: number; weights: number[] }> = [
+  { maxRound: 3, weights: [0.55, 0.2, 0.12, 0.08, 0.05] },
+  { maxRound: 7, weights: [0.40, 0.25, 0.16, 0.11, 0.08] },
+  { maxRound: 13, weights: [0.30, 0.23, 0.2, 0.15, 0.12] },
+];
+
 export interface DraftState {
   teams: (Player | null)[][];
   available: Player[];
@@ -45,6 +51,21 @@ export interface DraftState {
   userTeamIndex: number;
   picksMade: number;
   draftHistory: DraftPick[];
+}
+
+function getBotWeights(round: number, count: number): number[] {
+  const tier = BOT_WEIGHT_TIERS.find((item) => round <= item.maxRound) ?? BOT_WEIGHT_TIERS[BOT_WEIGHT_TIERS.length - 1];
+  const weights = tier.weights.slice(0, count);
+  const remaining = count - weights.length;
+
+  if (remaining > 0) {
+    const tailValue = weights.length > 0 ? weights[weights.length - 1] : 1 / count;
+    for (let i = 0; i < remaining; i += 1) {
+      weights.push(tailValue);
+    }
+  }
+
+  return weights;
 }
 
 export interface DraftPick {
@@ -218,19 +239,36 @@ export function botPick(state: DraftState): DraftState {
 
   const team = state.teams[state.currentPick];
   const topCandidates = state.available.slice(0, Math.min(5, state.available.length));
-  let player = topCandidates.find((candidate) => canFitPlayerInTeam(team, candidate));
+  const fittingTop = topCandidates.filter((candidate) => canFitPlayerInTeam(team, candidate));
 
-  if (!player) {
-    player = state.available.find((candidate) => canFitPlayerInTeam(team, candidate));
+  let selected: Player | undefined;
+
+  if (fittingTop.length > 0) {
+    const weights = getBotWeights(state.round, fittingTop.length);
+    const totalWeight = weights.reduce((acc, value) => acc + value, 0);
+    const roll = Math.random() * totalWeight;
+    let cumulative = 0;
+
+    for (let i = 0; i < fittingTop.length; i += 1) {
+      cumulative += weights[i];
+      if (roll <= cumulative) {
+        selected = fittingTop[i];
+        break;
+      }
+    }
+
+    selected ??= fittingTop[fittingTop.length - 1];
+  } else {
+    selected = state.available.find((candidate) => canFitPlayerInTeam(team, candidate));
   }
 
-  if (!player) {
+  if (!selected) {
     const nextState: DraftState = { ...state };
     advancePick(nextState);
     return nextState;
   }
 
-  return assignPlayer(state, player);
+  return assignPlayer(state, selected);
 }
 
 export function advancePick(state: DraftState) {
