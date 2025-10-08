@@ -45,6 +45,7 @@ export interface DraftState {
   userTeamIndex: number;
   picksMade: number;
   draftHistory: DraftPick[];
+  bestFitMap: Record<string, number>;
 }
 
 export interface DraftPick {
@@ -108,29 +109,11 @@ function eligibleSlotsForPlayer(player: Player): number[] {
   return eligible;
 }
 
-function greedyFillRoster(players: Player[]): (Player | null)[] {
-  const team = Array.from({ length: ROSTER_SLOTS.length }, () => null as Player | null);
-
-  for (const player of players) {
-    const eligible = eligibleSlotsForPlayer(player);
-    const slotIndex = eligible.find((idx) => team[idx] === null);
-    if (slotIndex !== undefined) {
-      team[slotIndex] = player;
-    } else {
-      const bnIndex = ROSTER_SLOTS.findIndex((slot, idx) => slot === "BN" && team[idx] === null);
-      if (bnIndex !== -1) {
-        team[bnIndex] = player;
-      }
-    }
-  }
-
-  return team;
-}
-
-function balanceRoster(players: Player[]): (Player | null)[] {
+function balanceRoster(players: Player[]): { team: (Player | null)[]; bestSlot: Map<Player, number> } {
   const roster = Array.from({ length: ROSTER_SLOTS.length }, () => null as Player | null);
+  const assignment = new Map<Player, number>();
   if (players.length === 0) {
-    return roster;
+    return { team: roster, bestSlot: assignment };
   }
 
   const playerEntries = players.map((p) => ({
@@ -155,11 +138,13 @@ function balanceRoster(players: Player[]): (Player | null)[] {
       }
       occupied[slotIndex] = true;
       roster[slotIndex] = player;
+      assignment.set(player, slotIndex);
       if (search(index + 1)) {
         return true;
       }
       occupied[slotIndex] = false;
       roster[slotIndex] = null;
+      assignment.delete(player);
     }
 
     return false;
@@ -167,10 +152,26 @@ function balanceRoster(players: Player[]): (Player | null)[] {
 
   const success = search(0);
   if (!success) {
-    return greedyFillRoster(players);
+    assignment.clear();
+    const fallback = Array.from({ length: ROSTER_SLOTS.length }, () => null as Player | null);
+    for (const player of players) {
+      const eligible = eligibleSlotsForPlayer(player);
+      const slotIndex = eligible.find((idx) => fallback[idx] === null);
+      if (slotIndex !== undefined) {
+        fallback[slotIndex] = player;
+        assignment.set(player, slotIndex);
+      } else {
+        const bnIndex = ROSTER_SLOTS.findIndex((slot, idx) => slot === "BN" && fallback[idx] === null);
+        if (bnIndex !== -1) {
+          fallback[bnIndex] = player;
+          assignment.set(player, bnIndex);
+        }
+      }
+    }
+    return { team: fallback, bestSlot: assignment };
   }
 
-  return roster;
+  return { team: roster, bestSlot: assignment };
 }
 
 export function assignPlayer(state: DraftState, player: Player): DraftState {
@@ -179,8 +180,15 @@ export function assignPlayer(state: DraftState, player: Player): DraftState {
   const existingPlayers = nextTeams[teamIndex].filter(Boolean) as Player[];
   const rosterPlayers = [...existingPlayers, player];
 
-  const balancedTeam = balanceRoster(rosterPlayers);
+  const { team: balancedTeam, bestSlot } = balanceRoster(rosterPlayers);
+  if (!bestSlot.has(player)) {
+    return state;
+  }
+  const bestFitMap = { ...state.bestFitMap };
   nextTeams[teamIndex] = balancedTeam;
+  for (const [assignedPlayer, slotIndex] of bestSlot.entries()) {
+    bestFitMap[assignedPlayer.player] = slotIndex;
+  }
 
   const pickRecord: DraftPick = {
     player,
@@ -196,6 +204,7 @@ export function assignPlayer(state: DraftState, player: Player): DraftState {
     available: state.available.filter((p) => p.player !== player.player),
     picksMade: state.picksMade + 1,
     draftHistory: [...state.draftHistory, pickRecord],
+    bestFitMap,
   };
 
   advancePick(nextState);
@@ -252,5 +261,6 @@ export function initDraft(players: Player[], totalRounds = 13, userTeamIndex = 0
     userTeamIndex,
     picksMade: 0,
     draftHistory: [],
+    bestFitMap: {},
   };
 }
