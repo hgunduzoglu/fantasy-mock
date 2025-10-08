@@ -1,12 +1,26 @@
 "use client";
 
+import { useMemo } from "react";
 import { useDraft } from "../context/DraftContext";
+import { canFitPlayerInTeam } from "../utils/draftLogic";
 import { formatStatValue, getPlayerMeta, PLAYER_STAT_COLUMNS } from "../utils/playerDisplay";
 
 const MAX_VISIBLE_PLAYERS = 50;
 
 export default function PlayerList() {
   const { state, userPickPlayer } = useDraft();
+
+  const fitCache = useMemo(() => {
+    const cache = new Map<string, boolean>();
+    if (!state) {
+      return cache;
+    }
+    const team = state.teams[state.userTeamIndex] ?? [];
+    for (const player of state.available) {
+      cache.set(player.player, canFitPlayerInTeam(team, player));
+    }
+    return cache;
+  }, [state]);
 
   if (!state) {
     return <p>Draft has not started.</p>;
@@ -38,7 +52,8 @@ export default function PlayerList() {
         <tbody>
           {availablePlayers.slice(0, MAX_VISIBLE_PLAYERS).map((player) => {
             const { name, team, positions } = getPlayerMeta(player);
-            const buttonDisabled = !isUsersTurn;
+            const canFit = fitCache.get(player.player) ?? true;
+            const buttonDisabled = !isUsersTurn || !canFit;
 
             return (
               <tr key={player.player} className="hover:bg-gray-50">
@@ -66,6 +81,11 @@ export default function PlayerList() {
                     }`}
                     disabled={buttonDisabled}
                     onClick={() => userPickPlayer(player)}
+                    title={
+                      buttonDisabled && isUsersTurn && !canFit
+                        ? "No eligible roster slot available for this player."
+                        : undefined
+                    }
                   >
                     Select Player
                   </button>

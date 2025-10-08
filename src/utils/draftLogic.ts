@@ -45,7 +45,6 @@ export interface DraftState {
   userTeamIndex: number;
   picksMade: number;
   draftHistory: DraftPick[];
-  bestFitMap: Record<string, number>;
 }
 
 export interface DraftPick {
@@ -174,6 +173,12 @@ function balanceRoster(players: Player[]): { team: (Player | null)[]; bestSlot: 
   return { team: roster, bestSlot: assignment };
 }
 
+export function canFitPlayerInTeam(team: (Player | null)[], player: Player): boolean {
+  const existingPlayers = team.filter(Boolean) as Player[];
+  const { bestSlot } = balanceRoster([...existingPlayers, player]);
+  return bestSlot.has(player);
+}
+
 export function assignPlayer(state: DraftState, player: Player): DraftState {
   const teamIndex = state.currentPick;
   const nextTeams = state.teams.map((team) => team.slice());
@@ -184,11 +189,7 @@ export function assignPlayer(state: DraftState, player: Player): DraftState {
   if (!bestSlot.has(player)) {
     return state;
   }
-  const bestFitMap = { ...state.bestFitMap };
   nextTeams[teamIndex] = balancedTeam;
-  for (const [assignedPlayer, slotIndex] of bestSlot.entries()) {
-    bestFitMap[assignedPlayer.player] = slotIndex;
-  }
 
   const pickRecord: DraftPick = {
     player,
@@ -204,7 +205,6 @@ export function assignPlayer(state: DraftState, player: Player): DraftState {
     available: state.available.filter((p) => p.player !== player.player),
     picksMade: state.picksMade + 1,
     draftHistory: [...state.draftHistory, pickRecord],
-    bestFitMap,
   };
 
   advancePick(nextState);
@@ -216,21 +216,20 @@ export function botPick(state: DraftState): DraftState {
     return state;
   }
 
-  const candidates = state.available.slice(0, Math.min(5, state.available.length));
-  const weights = [0.4, 0.25, 0.15, 0.12, 0.08];
-  const r = Math.random();
-  let sum = 0;
-  let chosenIndex = 0;
+  const team = state.teams[state.currentPick];
+  const topCandidates = state.available.slice(0, Math.min(5, state.available.length));
+  let player = topCandidates.find((candidate) => canFitPlayerInTeam(team, candidate));
 
-  for (let i = 0; i < candidates.length; i += 1) {
-    sum += weights[i] ?? 0;
-    if (r <= sum) {
-      chosenIndex = i;
-      break;
-    }
+  if (!player) {
+    player = state.available.find((candidate) => canFitPlayerInTeam(team, candidate));
   }
 
-  const player = candidates[chosenIndex];
+  if (!player) {
+    const nextState: DraftState = { ...state };
+    advancePick(nextState);
+    return nextState;
+  }
+
   return assignPlayer(state, player);
 }
 
@@ -261,6 +260,5 @@ export function initDraft(players: Player[], totalRounds = 13, userTeamIndex = 0
     userTeamIndex,
     picksMade: 0,
     draftHistory: [],
-    bestFitMap: {},
   };
 }
