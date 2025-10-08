@@ -2,12 +2,17 @@
 
 import { useDraft } from "../context/DraftContext";
 
+const MAX_VISIBLE_PLAYERS = 50;
+
 export default function PlayerList() {
   const { state, userPickPlayer } = useDraft();
 
-  if (!state) return <p>Draft başlatılmadı.</p>;
+  if (!state) {
+    return <p>Draft has not started.</p>;
+  }
 
-  const availablePlayers = state.availablePlayers;
+  const availablePlayers = state.available;
+  const isUsersTurn = state.currentPick === state.userTeamIndex;
 
   return (
     <div>
@@ -23,25 +28,25 @@ export default function PlayerList() {
           </tr>
         </thead>
         <tbody>
-          {availablePlayers.slice(0, 50).map((p) => {
-            // oyuncu string: "Luka Dončić DAL - PG,SG"
-            const [nameTeam, posRaw] = p.player.split(" - ");
-            const [name, team] = nameTeam.split(" ").length > 1
-              ? [nameTeam.split(" ").slice(0, -1).join(" "), nameTeam.split(" ").slice(-1)[0]]
-              : [nameTeam, ""];
-            const positions = posRaw ? posRaw.split(",") : [];
+          {availablePlayers.slice(0, MAX_VISIBLE_PLAYERS).map((p) => {
+            const [nameAndTeam, positionsRaw] = p.player.split(" - ");
+            const trimmed = (nameAndTeam ?? "").trim();
+            const nameParts = trimmed.split(" ");
+            const team = nameParts.length > 1 ? nameParts.pop() ?? "" : "";
+            const name = nameParts.join(" ") || trimmed;
+            const positions = positionsRaw ? positionsRaw.split(",").map((pos) => pos.trim()) : [];
+            const buttonDisabled = !isUsersTurn;
 
             return (
               <tr key={p.player} className="hover:bg-gray-50">
-                <td className="border border-gray-300 px-2 py-1 text-center">
-                  {p.expert_rank}
-                </td>
+                <td className="border border-gray-300 px-2 py-1 text-center">{p.expert_rank}</td>
                 <td className="border border-gray-300 px-2 py-1">{name}</td>
                 <td className="border border-gray-300 px-2 py-1">{positions.join(", ")}</td>
                 <td className="border border-gray-300 px-2 py-1">{team}</td>
                 <td className="border border-gray-300 px-2 py-1 text-center">
                   <button
-                    className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                    className={`px-2 py-1 rounded ${buttonDisabled ? "bg-gray-300 text-gray-600" : "bg-green-600 text-white hover:bg-green-700"}`}
+                    disabled={buttonDisabled}
                     onClick={() => userPickPlayer(p)}
                   >
                     Select Player
@@ -53,7 +58,7 @@ export default function PlayerList() {
         </tbody>
       </table>
       <p className="text-sm text-gray-500 mt-2">
-        İlk 50 oyuncu gösteriliyor (scroll veya pagination sonra eklenebilir).
+        Showing the first 50 players (pagination can be added later).
       </p>
     </div>
   );

@@ -1,11 +1,28 @@
-// src/utils/draftLogic.ts
+// Utility functions and types that power the draft simulator.
 
-// Oyuncu tipi
+const TEAM_COUNT = 16;
+
+const NUMERIC_FIELDS: Array<keyof Player> = [
+  "expert_rank",
+  "rank",
+  "adp",
+  "gp",
+  "fg_pct",
+  "ft_pct",
+  "threes",
+  "pts",
+  "reb",
+  "ast",
+  "stl",
+  "blk",
+  "to",
+];
+
 export interface Player {
   expert_rank: number;
   rank: number;
   adp: number;
-  player: string; // "Luka Doncic DAL - PG,SG"
+  player: string; // e.g. "Luka Doncic DAL - PG,SG"
   gp: number;
   fg_pct: number;
   ft_pct: number;
@@ -18,37 +35,54 @@ export interface Player {
   to: number;
 }
 
-// Draft state tipi
 export interface DraftState {
-  teams: (Player | null)[][]; // 16 takımın rosterları
-  available: Player[];        // seçilmemiş oyuncular
-  currentPick: number;        // sıra kimde (0–15)
-  round: number;              // kaçıncı tur
-  direction: 1 | -1;          // snake yönü
-  totalRounds: number;        // 13
+  teams: (Player | null)[][];
+  available: Player[];
+  currentPick: number;
+  round: number;
+  direction: 1 | -1;
+  totalRounds: number;
+  userTeamIndex: number;
 }
 
-// Roster yapısı
 export const ROSTER_SLOTS = [
-  "PG","SG","G","SF","PF","F","C","C",
-  "Util","Util",
-  "BN","BN","BN"
+  "PG",
+  "SG",
+  "G",
+  "SF",
+  "PF",
+  "F",
+  "C",
+  "C",
+  "Util",
+  "Util",
+  "BN",
+  "BN",
+  "BN",
 ];
 
-// Oyuncunun eligible pozisyonlarını parse et
-export function parsePositions(player: Player): string[] {
-  const parts = player.player.split(" - ");
-  if (parts.length < 2) return [];
-  const posPart = parts[1].trim();
-  return posPart.split(",").map(p => p.trim());
+function normalizePlayer(raw: Player): Player {
+  const result = { ...raw };
+  for (const key of NUMERIC_FIELDS) {
+    const value = result[key];
+    result[key] = typeof value === "number" ? value : Number(value ?? 0);
+  }
+  return result;
 }
 
-// Oyuncu için uygun slotu bul
+export function parsePositions(player: Player): string[] {
+  const [, posPart] = player.player.split(" - ");
+  if (!posPart) {
+    return [];
+  }
+  return posPart.split(",").map((p) => p.trim());
+}
+
 export function findSlot(team: (Player | null)[], player: Player): number | null {
   const positions = parsePositions(player);
 
-  for (let i = 0; i < ROSTER_SLOTS.length; i++) {
-    if (team[i]) continue; // slot dolu
+  for (let i = 0; i < ROSTER_SLOTS.length; i += 1) {
+    if (team[i]) continue;
     const slot = ROSTER_SLOTS[i];
 
     if (slot === "Util" || slot === "BN") return i;
@@ -56,47 +90,48 @@ export function findSlot(team: (Player | null)[], player: Player): number | null
     if (slot === "F" && (positions.includes("SF") || positions.includes("PF"))) return i;
     if (positions.includes(slot)) return i;
   }
+
   return null;
 }
 
-// Oyuncuyu takıma ata
 export function assignPlayer(state: DraftState, player: Player): DraftState {
+  const nextTeams = state.teams.map((team) => team.slice());
   const teamIndex = state.currentPick;
-  const team = state.teams[teamIndex];
+  const team = nextTeams[teamIndex];
   const slotIndex = findSlot(team, player);
 
   if (slotIndex !== null) {
     team[slotIndex] = player;
   } else {
-    // fallback: boş BN slotuna at
-    const bnIndex = team.findIndex((p, idx) => !p && ROSTER_SLOTS[idx] === "BN");
+    const bnIndex = team.findIndex((member, idx) => !member && ROSTER_SLOTS[idx] === "BN");
     if (bnIndex !== -1) {
       team[bnIndex] = player;
-    } else {
-      console.warn(`Takım ${teamIndex + 1} için uygun slot yok`);
     }
   }
 
-  // Oyuncuyu available listesinden çıkar
-  state.available = state.available.filter(p => p.player !== player.player);
+  const nextState: DraftState = {
+    ...state,
+    teams: nextTeams,
+    available: state.available.filter((p) => p.player !== player.player),
+  };
 
-  // Sırayı ilerlet
-  advancePick(state);
-
-  return { ...state };
+  advancePick(nextState);
+  return nextState;
 }
 
-// Bot pick algoritması
 export function botPick(state: DraftState): DraftState {
-  const candidates = state.available.slice(0, 5);
-  if (candidates.length === 0) return state;
+  if (state.available.length === 0) {
+    return state;
+  }
 
+  const candidates = state.available.slice(0, Math.min(5, state.available.length));
   const weights = [0.4, 0.25, 0.15, 0.12, 0.08];
   const r = Math.random();
   let sum = 0;
   let chosenIndex = 0;
-  for (let i = 0; i < weights.length; i++) {
-    sum += weights[i];
+
+  for (let i = 0; i < candidates.length; i += 1) {
+    sum += weights[i] ?? 0;
     if (r <= sum) {
       chosenIndex = i;
       break;
@@ -107,31 +142,30 @@ export function botPick(state: DraftState): DraftState {
   return assignPlayer(state, player);
 }
 
-// Snake draft sırasını ilerlet
 export function advancePick(state: DraftState) {
-  const { currentPick, direction } = state;
-
-  if (direction === 1 && currentPick === 15) {
-    state.currentPick = 15;
+  if (state.direction === 1 && state.currentPick === TEAM_COUNT - 1) {
+    state.currentPick = TEAM_COUNT - 1;
     state.round += 1;
     state.direction = -1;
-  } else if (direction === -1 && currentPick === 0) {
+  } else if (state.direction === -1 && state.currentPick === 0) {
     state.currentPick = 0;
     state.round += 1;
     state.direction = 1;
   } else {
-    state.currentPick += direction;
+    state.currentPick += state.direction;
   }
 }
 
-// Yeni draft başlat
-export function initDraft(players: Player[], totalRounds = 13): DraftState {
+export function initDraft(players: Player[], totalRounds = 13, userTeamIndex = 0): DraftState {
   return {
-    teams: Array.from({ length: 16 }, () => Array(ROSTER_SLOTS.length).fill(null)),
-    available: players.sort((a, b) => a.expert_rank - b.expert_rank),
+    teams: Array.from({ length: TEAM_COUNT }, () => Array(ROSTER_SLOTS.length).fill(null)),
+    available: players
+      .map(normalizePlayer)
+      .sort((a, b) => a.expert_rank - b.expert_rank),
     currentPick: 0,
     round: 1,
     direction: 1,
     totalRounds,
+    userTeamIndex,
   };
 }

@@ -1,19 +1,16 @@
 "use client";
 
 import { useDraft } from "../context/DraftContext";
-
-const ROSTER_SLOTS = [
-  "PG", "SG", "G", "SF", "PF", "F", "C", "C",
-  "Util", "Util",
-  "BN", "BN", "BN"
-];
+import { ROSTER_SLOTS } from "../utils/draftLogic";
 
 export default function MyTeam() {
   const { state } = useDraft();
 
-  if (!state) return <p>Draft başlatılmadı.</p>;
+  if (!state) {
+    return <p>Draft has not started.</p>;
+  }
 
-  const myTeam = state.teams[0]; // 0 = kullanıcı
+  const myTeam = state.teams[state.userTeamIndex] ?? [];
 
   return (
     <div>
@@ -30,6 +27,7 @@ export default function MyTeam() {
         <tbody>
           {ROSTER_SLOTS.map((slot, idx) => {
             const player = myTeam[idx];
+
             if (!player) {
               return (
                 <tr key={idx}>
@@ -41,11 +39,12 @@ export default function MyTeam() {
               );
             }
 
-            const [nameTeam, posRaw] = player.player.split(" - ");
-            const [name, team] = nameTeam.split(" ").length > 1
-              ? [nameTeam.split(" ").slice(0, -1).join(" "), nameTeam.split(" ").slice(-1)[0]]
-              : [nameTeam, ""];
-            const positions = posRaw ? posRaw.split(",") : [];
+            const [nameAndTeam, positionsRaw] = player.player.split(" - ");
+            const trimmed = (nameAndTeam ?? "").trim();
+            const nameParts = trimmed.split(" ");
+            const team = nameParts.length > 1 ? nameParts.pop() ?? "" : "";
+            const name = nameParts.join(" ") || trimmed;
+            const positions = positionsRaw ? positionsRaw.split(",").map((pos) => pos.trim()) : [];
 
             return (
               <tr key={idx}>
