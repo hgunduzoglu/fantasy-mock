@@ -44,6 +44,15 @@ export interface DraftState {
   totalRounds: number;
   userTeamIndex: number;
   picksMade: number;
+  draftHistory: DraftPick[];
+}
+
+export interface DraftPick {
+  player: Player;
+  teamIndex: number;
+  round: number;
+  pickInRound: number;
+  overallPick: number;
 }
 
 export const ROSTER_SLOTS = [
@@ -110,11 +119,20 @@ export function assignPlayer(state: DraftState, player: Player): DraftState {
     }
   }
 
+  const pickRecord: DraftPick = {
+    player,
+    teamIndex,
+    round: state.round,
+    pickInRound: state.currentPick + 1,
+    overallPick: state.picksMade + 1,
+  };
+
   const nextState: DraftState = {
     ...state,
     teams: nextTeams,
     available: state.available.filter((p) => p.player !== player.player),
     picksMade: state.picksMade + 1,
+    draftHistory: [...state.draftHistory, pickRecord],
   };
 
   advancePick(nextState);
@@ -170,5 +188,6 @@ export function initDraft(players: Player[], totalRounds = 13, userTeamIndex = 0
     totalRounds,
     userTeamIndex,
     picksMade: 0,
+    draftHistory: [],
   };
 }

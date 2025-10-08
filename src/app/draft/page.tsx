@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useDraft } from "../../context/DraftContext";
 import PlayerList from "../../components/PlayerList";
 import MyTeam from "../../components/MyTeam";
+import DraftedPlayers from "../../components/DraftedPlayers";
 
-type DraftTab = "available" | "myteam";
+type DraftTab = "available" | "myteam" | "drafted";
 
 export default function DraftPage() {
   const { state } = useDraft();
@@ -48,9 +49,17 @@ export default function DraftPage() {
         >
           My Team
         </button>
+        <button
+          onClick={() => setTab("drafted")}
+          className={`px-4 py-2 rounded ${tab === "drafted" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+        >
+          Drafted Players
+        </button>
       </div>
 
-      {tab === "available" ? <PlayerList /> : <MyTeam />}
+      {tab === "available" && <PlayerList />}
+      {tab === "myteam" && <MyTeam />}
+      {tab === "drafted" && <DraftedPlayers />}
     </main>
   );
 }
