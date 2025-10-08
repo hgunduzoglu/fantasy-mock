@@ -1,23 +1,5 @@
 // Utility functions and types that power the draft simulator.
 
-const TEAM_COUNT = 16;
-
-const NUMERIC_FIELDS: Array<keyof Player> = [
-  "expert_rank",
-  "rank",
-  "adp",
-  "gp",
-  "fg_pct",
-  "ft_pct",
-  "threes",
-  "pts",
-  "reb",
-  "ast",
-  "stl",
-  "blk",
-  "to",
-];
-
 export interface Player {
   expert_rank: number;
   rank: number;
@@ -34,6 +16,24 @@ export interface Player {
   blk: number;
   to: number;
 }
+
+const TEAM_COUNT = 16;
+
+const NUMERIC_FIELDS = [
+  "expert_rank",
+  "rank",
+  "adp",
+  "gp",
+  "fg_pct",
+  "ft_pct",
+  "threes",
+  "pts",
+  "reb",
+  "ast",
+  "stl",
+  "blk",
+  "to",
+] as const;
 
 export interface DraftState {
   teams: (Player | null)[][];
