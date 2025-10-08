@@ -88,36 +88,99 @@ export function parsePositions(player: Player): string[] {
   return posPart.split(",").map((p) => p.trim());
 }
 
-export function findSlot(team: (Player | null)[], player: Player): number | null {
+function isPlayerEligibleForSlot(player: Player, slot: string): boolean {
   const positions = parsePositions(player);
+  if (slot === "Util" || slot === "BN") return true;
+  if (slot === "G") return positions.includes("PG") || positions.includes("SG");
+  if (slot === "F") return positions.includes("SF") || positions.includes("PF");
+  return positions.includes(slot);
+}
+
+function eligibleSlotsForPlayer(player: Player): number[] {
+  const eligible: number[] = [];
 
   for (let i = 0; i < ROSTER_SLOTS.length; i += 1) {
-    if (team[i]) continue;
-    const slot = ROSTER_SLOTS[i];
-
-    if (slot === "Util" || slot === "BN") return i;
-    if (slot === "G" && (positions.includes("PG") || positions.includes("SG"))) return i;
-    if (slot === "F" && (positions.includes("SF") || positions.includes("PF"))) return i;
-    if (positions.includes(slot)) return i;
+    if (isPlayerEligibleForSlot(player, ROSTER_SLOTS[i])) {
+      eligible.push(i);
+    }
   }
 
-  return null;
+  return eligible;
+}
+
+function greedyFillRoster(players: Player[]): (Player | null)[] {
+  const team = Array.from({ length: ROSTER_SLOTS.length }, () => null as Player | null);
+
+  for (const player of players) {
+    const eligible = eligibleSlotsForPlayer(player);
+    const slotIndex = eligible.find((idx) => team[idx] === null);
+    if (slotIndex !== undefined) {
+      team[slotIndex] = player;
+    } else {
+      const bnIndex = ROSTER_SLOTS.findIndex((slot, idx) => slot === "BN" && team[idx] === null);
+      if (bnIndex !== -1) {
+        team[bnIndex] = player;
+      }
+    }
+  }
+
+  return team;
+}
+
+function balanceRoster(players: Player[]): (Player | null)[] {
+  const roster = Array.from({ length: ROSTER_SLOTS.length }, () => null as Player | null);
+  if (players.length === 0) {
+    return roster;
+  }
+
+  const playerEntries = players.map((p) => ({
+    player: p,
+    slots: eligibleSlotsForPlayer(p),
+  }));
+
+  playerEntries.sort((a, b) => a.slots.length - b.slots.length);
+
+  const occupied = Array<boolean>(ROSTER_SLOTS.length).fill(false);
+
+  const search = (index: number): boolean => {
+    if (index === playerEntries.length) {
+      return true;
+    }
+
+    const { player, slots } = playerEntries[index];
+
+    for (const slotIndex of slots) {
+      if (occupied[slotIndex]) {
+        continue;
+      }
+      occupied[slotIndex] = true;
+      roster[slotIndex] = player;
+      if (search(index + 1)) {
+        return true;
+      }
+      occupied[slotIndex] = false;
+      roster[slotIndex] = null;
+    }
+
+    return false;
+  };
+
+  const success = search(0);
+  if (!success) {
+    return greedyFillRoster(players);
+  }
+
+  return roster;
 }
 
 export function assignPlayer(state: DraftState, player: Player): DraftState {
-  const nextTeams = state.teams.map((team) => team.slice());
   const teamIndex = state.currentPick;
-  const team = nextTeams[teamIndex];
-  const slotIndex = findSlot(team, player);
+  const nextTeams = state.teams.map((team) => team.slice());
+  const existingPlayers = nextTeams[teamIndex].filter(Boolean) as Player[];
+  const rosterPlayers = [...existingPlayers, player];
 
-  if (slotIndex !== null) {
-    team[slotIndex] = player;
-  } else {
-    const bnIndex = team.findIndex((member, idx) => !member && ROSTER_SLOTS[idx] === "BN");
-    if (bnIndex !== -1) {
-      team[bnIndex] = player;
-    }
-  }
+  const balancedTeam = balanceRoster(rosterPlayers);
+  nextTeams[teamIndex] = balancedTeam;
 
   const pickRecord: DraftPick = {
     player,
