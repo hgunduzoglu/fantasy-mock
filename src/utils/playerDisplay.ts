@@ -43,8 +43,6 @@ const formatIntegerLike = (value: number): string => {
 };
 
 export const PLAYER_STAT_COLUMNS: PlayerStatColumn[] = [
-  { key: "rank", label: "Rank" },
-  { key: "adp", label: "ADP" },
   { key: "gp", label: "GP" },
   { key: "fg_pct", label: "FG%" },
   { key: "ft_pct", label: "FT%" },

@@ -4,7 +4,7 @@ import { useDraft } from "../context/DraftContext";
 import { ROSTER_SLOTS } from "../utils/draftLogic";
 import { formatStatValue, getPlayerMeta, PLAYER_STAT_COLUMNS } from "../utils/playerDisplay";
 
-const DETAIL_COLUMN_COUNT = 4 + PLAYER_STAT_COLUMNS.length;
+const DETAIL_COLUMN_COUNT = 6 + PLAYER_STAT_COLUMNS.length;
 
 export default function MyTeam() {
   const { state } = useDraft();
@@ -23,6 +23,8 @@ export default function MyTeam() {
           <tr className="bg-gray-100">
             <th className="border border-gray-300 px-2 py-1 w-24">Slot</th>
             <th className="border border-gray-300 px-2 py-1">Expert Rank</th>
+            <th className="border border-gray-300 px-2 py-1">Rank</th>
+            <th className="border border-gray-300 px-2 py-1">ADP</th>
             <th className="border border-gray-300 px-2 py-1">Player</th>
             <th className="border border-gray-300 px-2 py-1">Positions</th>
             <th className="border border-gray-300 px-2 py-1">Team</th>
@@ -54,6 +56,12 @@ export default function MyTeam() {
               <tr key={idx}>
                 <td className="border border-gray-300 px-2 py-1 text-center">{slot}</td>
                 <td className="border border-gray-300 px-2 py-1 text-center">{player.expert_rank}</td>
+                <td className="border border-gray-300 px-2 py-1 text-center">
+                  {formatStatValue("rank", player.rank)}
+                </td>
+                <td className="border border-gray-300 px-2 py-1 text-center">
+                  {formatStatValue("adp", player.adp)}
+                </td>
                 <td className="border border-gray-300 px-2 py-1">{name}</td>
                 <td className="border border-gray-300 px-2 py-1">{positions.join(", ")}</td>
                 <td className="border border-gray-300 px-2 py-1">{team}</td>

@@ -30,6 +30,9 @@ export default function DraftedPlayers() {
             <th className="border border-gray-300 px-2 py-1">Round</th>
             <th className="border border-gray-300 px-2 py-1">Pick</th>
             <th className="border border-gray-300 px-2 py-1">Team</th>
+            <th className="border border-gray-300 px-2 py-1">Expert Rank</th>
+            <th className="border border-gray-300 px-2 py-1">Rank</th>
+            <th className="border border-gray-300 px-2 py-1">ADP</th>
             <th className="border border-gray-300 px-2 py-1">Player</th>
             <th className="border border-gray-300 px-2 py-1">Positions</th>
             <th className="border border-gray-300 px-2 py-1">NBA Team</th>
@@ -49,6 +52,13 @@ export default function DraftedPlayers() {
                 <td className="border border-gray-300 px-2 py-1 text-center">{pick.round}</td>
                 <td className="border border-gray-300 px-2 py-1 text-center">{pick.pickInRound}</td>
                 <td className="border border-gray-300 px-2 py-1 text-center">{`Team #${pick.teamIndex + 1}`}</td>
+                <td className="border border-gray-300 px-2 py-1 text-center">{pick.player.expert_rank}</td>
+                <td className="border border-gray-300 px-2 py-1 text-center">
+                  {formatStatValue("rank", pick.player.rank)}
+                </td>
+                <td className="border border-gray-300 px-2 py-1 text-center">
+                  {formatStatValue("adp", pick.player.adp)}
+                </td>
                 <td className="border border-gray-300 px-2 py-1">{name}</td>
                 <td className="border border-gray-300 px-2 py-1">{positions.join(", ")}</td>
                 <td className="border border-gray-300 px-2 py-1">{team}</td>

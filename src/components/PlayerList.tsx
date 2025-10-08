@@ -22,6 +22,8 @@ export default function PlayerList() {
         <thead>
           <tr className="bg-gray-100">
             <th className="border border-gray-300 px-2 py-1">Expert Rank</th>
+            <th className="border border-gray-300 px-2 py-1">Rank</th>
+            <th className="border border-gray-300 px-2 py-1">ADP</th>
             <th className="border border-gray-300 px-2 py-1">Player</th>
             <th className="border border-gray-300 px-2 py-1">Positions</th>
             <th className="border border-gray-300 px-2 py-1">Team</th>
@@ -41,6 +43,12 @@ export default function PlayerList() {
             return (
               <tr key={player.player} className="hover:bg-gray-50">
                 <td className="border border-gray-300 px-2 py-1 text-center">{player.expert_rank}</td>
+                <td className="border border-gray-300 px-2 py-1 text-center">
+                  {formatStatValue("rank", player.rank)}
+                </td>
+                <td className="border border-gray-300 px-2 py-1 text-center">
+                  {formatStatValue("adp", player.adp)}
+                </td>
                 <td className="border border-gray-300 px-2 py-1">{name}</td>
                 <td className="border border-gray-300 px-2 py-1">{positions.join(", ")}</td>
                 <td className="border border-gray-300 px-2 py-1">{team}</td>
