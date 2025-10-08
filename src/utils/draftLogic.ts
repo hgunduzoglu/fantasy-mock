@@ -41,6 +41,13 @@ const BOT_WEIGHT_TIERS: Array<{ maxRound: number; weights: number[] }> = [
   { maxRound: 13, weights: [0.30, 0.23, 0.2, 0.15, 0.12] },
 ];
 
+export type DraftSortKey = "expert_rank" | "rank" | "adp";
+
+export interface DraftSort {
+  key: DraftSortKey;
+  direction: "asc";
+}
+
 export interface DraftState {
   teams: (Player | null)[][];
   available: Player[];
@@ -283,6 +290,16 @@ export function advancePick(state: DraftState) {
   } else {
     state.currentPick += state.direction;
   }
+}
+
+export function applySort(state: DraftState, sort: DraftSort | null): DraftState {
+  const sorted = state.available.slice().sort((a, b) => {
+    if (!sort) {
+      return a.expert_rank - b.expert_rank;
+    }
+    return a[sort.key] - b[sort.key];
+  });
+  return { ...state, available: sorted };
 }
 
 export function initDraft(players: Player[], totalRounds = 13, userTeamIndex = 0): DraftState {

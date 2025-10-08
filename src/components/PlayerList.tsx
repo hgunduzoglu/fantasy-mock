@@ -2,13 +2,13 @@
 
 import { useMemo } from "react";
 import { useDraft } from "../context/DraftContext";
-import { canFitPlayerInTeam } from "../utils/draftLogic";
+import { canFitPlayerInTeam, type DraftSortKey } from "../utils/draftLogic";
 import { formatStatValue, getPlayerMeta, PLAYER_STAT_COLUMNS } from "../utils/playerDisplay";
 
 const MAX_VISIBLE_PLAYERS = 50;
 
 export default function PlayerList() {
-  const { state, userPickPlayer } = useDraft();
+  const { state, userPickPlayer, sort, setSort } = useDraft();
 
   const fitCache = useMemo(() => {
     const cache = new Map<string, boolean>();
@@ -28,6 +28,27 @@ export default function PlayerList() {
 
   const availablePlayers = state.available;
   const isUsersTurn = state.currentPick === state.userTeamIndex;
+  const handleSort = (key: DraftSortKey) => {
+    if (sort?.key === key) {
+      setSort(null);
+    } else {
+      setSort({ key, direction: "asc" });
+    }
+  };
+
+  const renderHeaderButton = (label: string, key: DraftSortKey) => {
+    const isActive = sort?.key === key;
+    return (
+      <button
+        type="button"
+        onClick={() => handleSort(key)}
+        className={`flex items-center justify-center w-full px-2 py-1 ${isActive ? "text-blue-600 font-semibold" : ""}`}
+      >
+        {label}
+        {isActive ? <span className="ml-1 text-xs">▲</span> : null}
+      </button>
+    );
+  };
 
   return (
     <div>
@@ -35,9 +56,9 @@ export default function PlayerList() {
       <table className="w-full border-collapse border border-gray-300">
         <thead>
           <tr className="bg-gray-100">
-            <th className="border border-gray-300 px-2 py-1">Expert Rank</th>
-            <th className="border border-gray-300 px-2 py-1">Rank</th>
-            <th className="border border-gray-300 px-2 py-1">ADP</th>
+            <th className="border border-gray-300 px-2 py-1">{renderHeaderButton("Expert Rank", "expert_rank")}</th>
+            <th className="border border-gray-300 px-2 py-1">{renderHeaderButton("Rank", "rank")}</th>
+            <th className="border border-gray-300 px-2 py-1">{renderHeaderButton("ADP", "adp")}</th>
             <th className="border border-gray-300 px-2 py-1">Player</th>
             <th className="border border-gray-300 px-2 py-1">Positions</th>
             <th className="border border-gray-300 px-2 py-1">Team</th>
