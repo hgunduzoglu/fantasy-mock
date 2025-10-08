@@ -58,6 +58,7 @@ export interface DraftState {
   userTeamIndex: number;
   picksMade: number;
   draftHistory: DraftPick[];
+  datasetName: string;
 }
 
 function getBotWeights(round: number, count: number): number[] {
@@ -109,11 +110,15 @@ function normalizePlayer(raw: Player): Player {
 }
 
 export function parsePositions(player: Player): string[] {
-  const [, posPart] = player.player.split(" - ");
+  const raw = typeof player.player === "string" ? player.player : "";
+  const [, posPart] = raw.split(" - ");
   if (!posPart) {
     return [];
   }
-  return posPart.split(",").map((p) => p.trim());
+  return posPart
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
 }
 
 function isPlayerEligibleForSlot(player: Player, slot: string): boolean {
@@ -302,7 +307,12 @@ export function applySort(state: DraftState, sort: DraftSort | null): DraftState
   return { ...state, available: sorted };
 }
 
-export function initDraft(players: Player[], totalRounds = 13, userTeamIndex = 0): DraftState {
+export function initDraft(
+  players: Player[],
+  totalRounds = 13,
+  userTeamIndex = 0,
+  datasetName = "proj_25_26",
+): DraftState {
   return {
     teams: Array.from({ length: TEAM_COUNT }, () => Array(ROSTER_SLOTS.length).fill(null)),
     available: players
@@ -315,5 +325,6 @@ export function initDraft(players: Player[], totalRounds = 13, userTeamIndex = 0
     userTeamIndex,
     picksMade: 0,
     draftHistory: [],
+    datasetName,
   };
 }

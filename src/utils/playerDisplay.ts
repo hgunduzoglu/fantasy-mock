@@ -66,12 +66,13 @@ export const formatStatValue = (key: PlayerStatKey, value: number): string => {
 };
 
 export const getPlayerMeta = (player: Player) => {
-  const [nameAndTeam] = player.player.split(" - ");
+  const raw = typeof player.player === "string" ? player.player : "";
+  const [nameAndTeam] = raw.split(" - ");
   const trimmed = (nameAndTeam ?? "").trim();
 
   if (!trimmed) {
     return {
-      name: player.player,
+      name: raw,
       team: "",
       positions: parsePositions(player),
     };

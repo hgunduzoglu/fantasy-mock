@@ -45,7 +45,7 @@ export default function PlayerList() {
         className={`flex items-center justify-center w-full px-2 py-1 ${isActive ? "text-blue-600 font-semibold" : ""}`}
       >
         {label}
-        {isActive ? <span className="ml-1 text-xs">▲</span> : null}
+        {isActive ? <span className="ml-1 text-xs">^</span> : null}
       </button>
     );
   };

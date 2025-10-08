@@ -13,11 +13,12 @@ import {
 
 interface DraftContextType {
   state: DraftState | null;
-  startDraft: (players: Player[], userPick: number) => void;
+  startDraft: (players: Player[], userPick: number, datasetName: string) => void;
   userPickPlayer: (player: Player) => void;
   autoPickBotsUntilUser: () => void;
   sort: DraftSort | null;
   setSort: (sort: DraftSort | null) => void;
+  changeDataset: (players: Player[], datasetName: string) => void;
 }
 
 const DraftContext = createContext<DraftContextType | undefined>(undefined);
@@ -53,9 +54,9 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [state, setState] = useState<DraftState | null>(null);
   const [sort, setSort] = useState<DraftSort | null>(null);
 
-  const startDraft = (players: Player[], userPick: number) => {
+  const startDraft = (players: Player[], userPick: number, datasetName: string) => {
     const userTeamIndex = clampPickNumber(userPick) - 1;
-    const draft = runBotsUntilUser(initDraft(players, 13, userTeamIndex), sort);
+    const draft = runBotsUntilUser(initDraft(players, 13, userTeamIndex, datasetName), sort);
     setState(draft);
   };
 
@@ -78,6 +79,32 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setState((prev) => (prev ? runBotsUntilUser(prev, sort) : prev));
   };
 
+  const changeDataset = (players: Player[], datasetName: string) => {
+    if (!players.length) {
+      return;
+    }
+    setState((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      const base = applySort(initDraft(players, prev.totalRounds, prev.userTeamIndex, datasetName), sort);
+      const history = prev.draftHistory;
+      let rebuilt = base;
+
+      for (const pick of history) {
+        const replacement = rebuilt.available.find((candidate) => candidate.player === pick.player.player);
+        if (!replacement) {
+          console.warn(`Player "${pick.player.player}" not found in dataset "${datasetName}".`);
+          continue;
+        }
+        rebuilt = applySort(assignPlayer(rebuilt, replacement), sort);
+      }
+
+      return rebuilt;
+    });
+  };
+
   const handleSetSort = (nextSort: DraftSort | null) => {
     setSort(nextSort);
     setState((prev) => (prev ? applySort(prev, nextSort) : prev));
@@ -85,7 +112,15 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <DraftContext.Provider
-      value={{ state, startDraft, userPickPlayer, autoPickBotsUntilUser, sort, setSort: handleSetSort }}
+      value={{
+        state,
+        startDraft,
+        userPickPlayer,
+        autoPickBotsUntilUser,
+        sort,
+        setSort: handleSetSort,
+        changeDataset,
+      }}
     >
       {children}
     </DraftContext.Provider>

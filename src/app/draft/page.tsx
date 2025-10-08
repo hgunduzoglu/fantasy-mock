@@ -5,6 +5,7 @@ import { useDraft } from "../../context/DraftContext";
 import PlayerList from "../../components/PlayerList";
 import MyTeam from "../../components/MyTeam";
 import DraftedPlayers from "../../components/DraftedPlayers";
+import DatasetSelector from "../../components/DatasetSelector";
 
 type DraftTab = "available" | "myteam" | "drafted";
 
@@ -26,14 +27,17 @@ export default function DraftPage() {
 
   return (
     <main className="p-6 space-y-4">
-      <header>
-        <h1 className="text-2xl font-bold">
-          Round {state.round} - Pick {overallPickNumber}
-        </h1>
-        <p className="text-sm text-gray-600">
-          Current round slot #{roundPickNumber} - Team draft position #{state.userTeamIndex + 1}.{" "}
-          {isUsersTurn ? "It is your turn to draft." : "Waiting for bots to complete their turns."}
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">
+            Round {state.round} - Pick {overallPickNumber}
+          </h1>
+          <p className="text-sm text-gray-600">
+            Current round slot #{roundPickNumber} - Team draft position #{state.userTeamIndex + 1}.{" "}
+            {isUsersTurn ? "It is your turn to draft." : "Waiting for bots to complete their turns."}
+          </p>
+        </div>
+        <DatasetSelector />
       </header>
 
       <div className="flex space-x-4">

@@ -4,38 +4,41 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDraft } from "../context/DraftContext";
 import type { Player } from "../utils/draftLogic";
-
-const DATASETS = [
-  { value: "proj_25_26", label: "2025-26 Projected" },
-  { value: "avg_24_25", label: "2024-25 Average" },
-  { value: "total_24_25", label: "2024-25 Total" },
-];
+import { DEFAULT_DATASET, DATASET_OPTIONS } from "../utils/datasets";
 
 export default function HomePage() {
   const router = useRouter();
   const { startDraft } = useDraft();
 
   const [pickNumber, setPickNumber] = useState(1);
-  const [dataset, setDataset] = useState(DATASETS[0].value);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadPlayers = async () => {
       try {
-        const response = await fetch(`/data/${dataset}.json`);
+        setLoading(true);
+        setError(null);
+        const response = await fetch(`/data/${DEFAULT_DATASET}.json`);
         if (!response.ok) {
-          throw new Error(`Failed to load dataset ${dataset}`);
+          throw new Error(`Failed to load dataset ${DEFAULT_DATASET}`);
         }
         const data = (await response.json()) as Player[];
         if (!cancelled) {
           setPlayers(data);
         }
-      } catch (error) {
-        console.error("Data load error:", error);
+      } catch (err) {
+        console.error("Data load error:", err);
         if (!cancelled) {
           setPlayers([]);
+          setError("Default dataset could not be loaded.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
         }
       }
     };
@@ -44,14 +47,18 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [dataset]);
+  }, []);
 
   const handleStart = () => {
+    if (loading) {
+      alert("Please wait until the default dataset finishes loading.");
+      return;
+    }
     if (players.length === 0) {
       alert("Player data could not be loaded yet. Please try again.");
       return;
     }
-    startDraft(players, pickNumber);
+    startDraft(players, pickNumber, DEFAULT_DATASET);
     router.push("/draft");
   };
 
@@ -74,29 +81,18 @@ export default function HomePage() {
         />
       </div>
 
-      <div className="mb-4">
-        <label className="mr-2 font-semibold" htmlFor="dataset">
-          Dataset:
-        </label>
-        <select
-          id="dataset"
-          value={dataset}
-          onChange={(e) => setDataset(e.target.value)}
-          className="border rounded p-1"
-        >
-          {DATASETS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <p className="mb-4 text-sm text-gray-600">
+        Default dataset: {DATASET_OPTIONS[0].label}. You can switch datasets during the draft.
+      </p>
+
+      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
 
       <button
         onClick={handleStart}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+        disabled={loading || players.length === 0}
       >
-        Start Draft
+        {loading ? "Loading dataset..." : "Start Draft"}
       </button>
     </main>
   );
