@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useDraft } from "../context/DraftContext";
-import { canFitPlayerInTeam, type DraftSortKey } from "../utils/draftLogic";
+import { canFitPlayerInTeam, getPlayerId, type DraftSortKey } from "../utils/draftLogic";
 import { formatStatValue, getPlayerMeta, PLAYER_STAT_COLUMNS } from "../utils/playerDisplay";
 
 const MAX_VISIBLE_PLAYERS = 50;
@@ -71,13 +71,19 @@ export default function PlayerList() {
           </tr>
         </thead>
         <tbody>
-          {availablePlayers.slice(0, MAX_VISIBLE_PLAYERS).map((player) => {
+          {availablePlayers.slice(0, MAX_VISIBLE_PLAYERS).map((player, index) => {
             const { name, team, positions } = getPlayerMeta(player);
-            const canFit = fitCache.get(player.player) ?? true;
+            const canFit = fitCache.get(getPlayerId(player)) ?? true;
             const buttonDisabled = !isUsersTurn || !canFit;
 
             return (
-              <tr key={`player-${(player.player ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-")}-${player.expert_rank}-${player.rank}-${player.adp}`} className="hover:bg-gray-50">
+              <tr
+                key={`player-${(player.player ?? "")
+                  .trim()
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")}-${player.expert_rank}-${player.rank}-${player.adp}-${index}`}
+                className="hover:bg-gray-50"
+              >
                 <td className="border border-gray-300 px-2 py-1 text-center">{player.expert_rank}</td>
                 <td className="border border-gray-300 px-2 py-1 text-center">
                   {formatStatValue("rank", player.rank)}
