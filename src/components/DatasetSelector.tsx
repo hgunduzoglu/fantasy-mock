@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useDraft } from "../context/DraftContext";
-import type { Player } from "../utils/draftLogic";
-import { DATASET_OPTIONS, DEFAULT_DATASET } from "../utils/datasets";
+
+import { DATASET_OPTIONS, DEFAULT_DATASET, transformDataset } from "../utils/datasets";
 
 export default function DatasetSelector() {
   const { state, changeDataset } = useDraft();
@@ -26,7 +26,8 @@ export default function DatasetSelector() {
       if (!response.ok) {
         throw new Error(`Dataset ${value} could not be loaded`);
       }
-      const data = (await response.json()) as Player[];
+      const raw = await response.json();
+      const data = transformDataset(raw);
       changeDataset(data, value);
     } catch (err) {
       console.error(err);

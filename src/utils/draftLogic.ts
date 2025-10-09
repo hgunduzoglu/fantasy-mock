@@ -82,6 +82,7 @@ export interface DraftPick {
   round: number;
   pickInRound: number;
   overallPick: number;
+  playerId: string;
 }
 
 export const ROSTER_SLOTS = [
@@ -107,6 +108,19 @@ function normalizePlayer(raw: Player): Player {
     result[key] = typeof value === "number" ? value : Number(value ?? 0);
   }
   return result;
+}
+
+export function getPlayerId(player: Player): string {
+  const source =
+    (typeof player.player === "string" && player.player.length > 0
+      ? player.player
+      : `${player.expert_rank}-${player.rank}-${player.adp}`) ?? "";
+
+  return source
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
 }
 
 export function parsePositions(player: Player): string[] {
@@ -225,6 +239,7 @@ export function assignPlayer(state: DraftState, player: Player): DraftState {
   nextTeams[teamIndex] = balancedTeam;
 
   const pickRecord: DraftPick = {
+    playerId: getPlayerId(player),
     player,
     teamIndex,
     round: state.round,
@@ -235,7 +250,10 @@ export function assignPlayer(state: DraftState, player: Player): DraftState {
   const nextState: DraftState = {
     ...state,
     teams: nextTeams,
-    available: state.available.filter((p) => p.player !== player.player),
+    available: (() => {
+      const targetId = getPlayerId(player);
+      return state.available.filter((p) => getPlayerId(p) !== targetId);
+    })(),
     picksMade: state.picksMade + 1,
     draftHistory: [...state.draftHistory, pickRecord],
   };

@@ -77,7 +77,7 @@ export default function PlayerList() {
             const buttonDisabled = !isUsersTurn || !canFit;
 
             return (
-              <tr key={player.player} className="hover:bg-gray-50">
+              <tr key={`player-${(player.player ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-")}-${player.expert_rank}-${player.rank}-${player.adp}`} className="hover:bg-gray-50">
                 <td className="border border-gray-300 px-2 py-1 text-center">{player.expert_rank}</td>
                 <td className="border border-gray-300 px-2 py-1 text-center">
                   {formatStatValue("rank", player.rank)}

@@ -88,20 +88,72 @@ export const DraftProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return prev;
       }
 
-      const base = applySort(initDraft(players, prev.totalRounds, prev.userTeamIndex, datasetName), sort);
-      const history = prev.draftHistory;
-      let rebuilt = base;
-
-      for (const pick of history) {
-        const replacement = rebuilt.available.find((candidate) => candidate.player === pick.player.player);
-        if (!replacement) {
-          console.warn(`Player "${pick.player.player}" not found in dataset "${datasetName}".`);
-          continue;
-        }
-        rebuilt = applySort(assignPlayer(rebuilt, replacement), sort);
+      const sortedPlayers = [...players].sort((a, b) => a.expert_rank - b.expert_rank);
+      const datasetMap = new Map<string, Player>();
+      for (const player of sortedPlayers) {
+        datasetMap.set(getPlayerId(player), player);
       }
 
-      return rebuilt;
+      const updatedHistory = prev.draftHistory.map((pick) => {
+        const replacement =
+          datasetMap.get(pick.playerId) ??
+          datasetMap.get(getPlayerId(pick.player)) ??
+          pick.player;
+        return {
+          ...pick,
+          player: replacement,
+          playerId: getPlayerId(replacement),
+        };
+      });
+
+      const draftedIds = new Set(updatedHistory.map((pick) => pick.playerId));
+
+      const nextTeams = prev.teams.map((team) =>
+        team.map((member) => {
+          if (!member) return member;
+          const replacement = datasetMap.get(getPlayerId(member));
+          if (replacement) {
+            draftedIds.add(getPlayerId(replacement));
+            return replacement;
+          }
+          draftedIds.add(getPlayerId(member));
+          return member;
+        }),
+      );
+
+      const seen = new Set<string>();
+      const nextAvailable: Player[] = [];
+
+      for (const player of sortedPlayers) {
+        const id = getPlayerId(player);
+        if (draftedIds.has(id) || seen.has(id)) {
+          continue;
+        }
+        nextAvailable.push(player);
+        seen.add(id);
+      }
+
+      for (const player of prev.available) {
+        const id = getPlayerId(player);
+        if (draftedIds.has(id) || seen.has(id)) {
+          continue;
+        }
+        nextAvailable.push(player);
+        seen.add(id);
+      }
+
+      const nextState = applySort(
+        {
+          ...prev,
+          datasetName,
+          teams: nextTeams,
+          available: nextAvailable,
+          draftHistory: updatedHistory,
+        },
+        sort,
+      );
+
+      return nextState;
     });
   };
 

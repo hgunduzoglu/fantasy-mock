@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDraft } from "../context/DraftContext";
 import type { Player } from "../utils/draftLogic";
-import { DEFAULT_DATASET, DATASET_OPTIONS } from "../utils/datasets";
+import { DEFAULT_DATASET, DATASET_OPTIONS, transformDataset } from "../utils/datasets";
 
 export default function HomePage() {
   const router = useRouter();
@@ -26,9 +26,10 @@ export default function HomePage() {
         if (!response.ok) {
           throw new Error(`Failed to load dataset ${DEFAULT_DATASET}`);
         }
-        const data = (await response.json()) as Player[];
+        const raw = await response.json();
+        const transformed = transformDataset(raw);
         if (!cancelled) {
-          setPlayers(data);
+          setPlayers(transformed);
         }
       } catch (err) {
         console.error("Data load error:", err);
